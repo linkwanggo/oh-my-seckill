@@ -1,0 +1,108 @@
+package org.seckill.service.impl;
+
+import lombok.extern.slf4j.Slf4j;
+import org.seckill.dao.SeckillDAO;
+import org.seckill.dao.SuccessKilledDAO;
+import org.seckill.dto.Exposer;
+import org.seckill.dto.SeckillExecution;
+import org.seckill.entity.Seckill;
+import org.seckill.entity.SuccessKilled;
+import org.seckill.enums.SeckillStatEnum;
+import org.seckill.exception.RepeatSeckillException;
+import org.seckill.exception.SeckillClosedException;
+import org.seckill.exception.SeckillException;
+import org.seckill.service.SeckillService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.DigestUtils;
+
+import java.util.Date;
+import java.util.List;
+
+@Service
+@Slf4j
+public class SeckillServiceImpl implements SeckillService {
+
+    // md5盐
+    private final String salt = "aslfdjaskfhjkfhjeh3jrh23kej2kj";
+
+    @Autowired
+    private SeckillDAO seckillDAO;
+
+    @Autowired
+    private SuccessKilledDAO successKilledDAO;
+
+    public List<Seckill> getSeckillList() {
+        return seckillDAO.queryAll(0, 100);
+    }
+
+    public Seckill getById(long seckillId) {
+        return seckillDAO.queryById(seckillId);
+    }
+
+    public Exposer exportSeckillUrl(long seckillId) {
+        Seckill seckill = seckillDAO.queryById(seckillId);
+        if (seckill == null) {
+            return new Exposer(false, seckillId);
+        }
+        // 判断时间是否在秒杀时间范围内
+        Date startTime = seckill.getStartTime();
+        Date endTime = seckill.getEndTime();
+        Date now = new Date();
+        // 失败
+        if (now.getTime() < startTime.getTime() || now.getTime() > endTime.getTime()) {
+            return new Exposer(false, seckillId, now, startTime, endTime);
+        }
+        // 成功
+        String md5 = getMD5(seckillId);
+        return new Exposer(true, seckillId, md5);
+    }
+
+    private String getMD5(long seckillId) {
+        String md5 = seckillId + "/" + salt;
+        return DigestUtils.md5DigestAsHex(md5.getBytes());
+    }
+
+    /**
+     * 使用注解控制事务方法的优点：
+     * 1.开发团队达成一致约定，明确标注事务方法的编程风格。
+     * 2.保证事务方法的执行时间尽可能短，不要穿插其他网络操作RPC/HTTP请求或者剥离到事务方法之外。
+     * 3.不是所有方法都需要事务，如只有一条修改操作，只读操作不需要事务控制。
+     */
+    @Transactional
+    public SeckillExecution executeSeckill(long seckillId, long userPhone, String md5)
+            throws SeckillException, RepeatSeckillException, SeckillClosedException {
+        // 执行秒杀：检查用户传来的md5
+        try {
+            if (md5 == null || !md5.equals(getMD5(seckillId))) {
+                throw new SeckillException("秒杀数据篡改");
+            }
+            // 执行秒杀逻辑：减库存 + 添加秒杀明细
+            Date now = new Date();
+            int updateCount = seckillDAO.reduceNumber(seckillId, now);
+            if (updateCount <= 0) {
+                // 没有更新件库存记录 秒杀失败
+                throw new SeckillException("秒杀结束");
+            } else {
+                // 添加秒杀明细
+                int insertCount = successKilledDAO.insertSuccessKilled(seckillId, userPhone);
+                if (insertCount <= 0) {
+                    // 添加秒杀明细失败
+                    throw new SeckillException("重复秒杀");
+                } else {
+                    // 秒杀成功
+                    SuccessKilled successKilled = successKilledDAO.queryByIdWithSeckill(seckillId, userPhone);
+                    return new SeckillExecution(seckillId, SeckillStatEnum.SUCCESS, successKilled);
+                }
+            }
+        } catch (RepeatSeckillException re) {
+            throw re;
+        } catch (SeckillClosedException sce) {
+            throw sce;
+        }catch (Exception e) {
+            // 将所有编译期错误转化为运行期错误
+            throw new SeckillException("秒杀系统异常:" + e.getMessage());
+        }
+    }
+}
