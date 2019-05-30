@@ -60,4 +60,19 @@ public class SeckillServiceTest {
             log.error("秒杀关闭异常");
         }
     }
+
+    @Test
+    public void killByProcedure() {
+        long seckillId = 1001;
+        long userPhone = 11111111111L;
+        Exposer exposer = seckillService.exportSeckillUrl(seckillId);
+        if (exposer.isExposed()) {
+            SeckillExecution seckillExecution = seckillService.executeSeckillProcedure(seckillId, userPhone, exposer.getMd5());
+            log.info("seckillExecution={}", seckillExecution);
+            log.info("SuccessKilled={}", seckillExecution.getSuccessKilled());
+        } else {
+            // 秒杀活动未开启
+            log.warn("exposer={}", exposer);
+        }
+    }
 }

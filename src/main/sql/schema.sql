@@ -29,7 +29,7 @@ VALUES
 -- 创建秒杀明细表
 CREATE TABLE `success_killed` (
 `seckill_id` BIGINT NOT NULL COMMENT '商品id',
-`user_phone` INT(11) NOT NULL COMMENT '用户手机号',
+`user_phone` BIGINT NOT NULL COMMENT '用户手机号',
 `state` TINYINT NOT NULL DEFAULT -1 COMMENT '秒杀状态 默认-1:无效状态 0:成功 1:失败',
 `create_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
 PRIMARY KEY(seckill_id, user_phone), /*联合主键*/

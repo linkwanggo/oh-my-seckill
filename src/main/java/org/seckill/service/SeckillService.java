@@ -44,4 +44,17 @@ public interface SeckillService {
      */
     SeckillExecution executeSeckill(long seckillId, long userPhone, String md5)
             throws SeckillException, RepeatSeckillException, SeckillClosedException;
+
+    /**
+     * 使用mysql存储过程的方式执行秒杀操作
+     * @param seckillId
+     * @param userPhone
+     * @param md5
+     * @return
+     * @throws SeckillException
+     * @throws RepeatSeckillException
+     * @throws SeckillClosedException
+     */
+    SeckillExecution executeSeckillProcedure(long seckillId, long userPhone, String md5)
+            throws SeckillException, RepeatSeckillException, SeckillClosedException;
 }

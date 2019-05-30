@@ -66,30 +66,32 @@ public class SeckillController {
     @RequestMapping(value = "/{seckillId}/{md5}/execution",
             method = RequestMethod.POST,
             produces = {"application/json;charset=UTF-8"})
+    @ResponseBody
     public SeckillResult<SeckillExecution> execution(@PathVariable("seckillId") Long seckillId,
                                                      @PathVariable("md5") String md5,
-                                                     @RequestParam("killPhone") Long killPhone) {
+                                                     @CookieValue("killPhone") Long killPhone) {
         if (killPhone == null) {
             return new SeckillResult<SeckillExecution>(false, "未注册");
         }
         try {
-            SeckillExecution seckillExecution = seckillService.executeSeckill(seckillId, killPhone, md5);
+            SeckillExecution seckillExecution = seckillService.executeSeckillProcedure(seckillId, killPhone, md5);
             return new SeckillResult<SeckillExecution>(true, seckillExecution);
         } catch (RepeatSeckillException re) {
             SeckillExecution seckillExecution = new SeckillExecution(seckillId, SeckillStatEnum.REPEAT_KILL);
-            return new SeckillResult<SeckillExecution>(false, seckillExecution);
+            return new SeckillResult<SeckillExecution>(true, seckillExecution);
         } catch (SeckillClosedException se) {
             SeckillExecution seckillExecution = new SeckillExecution(seckillId, SeckillStatEnum.END);
-            return new SeckillResult<SeckillExecution>(false, seckillExecution);
+            return new SeckillResult<SeckillExecution>(true, seckillExecution);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             SeckillExecution seckillExecution = new SeckillExecution(seckillId, SeckillStatEnum.INNER_ERROR);
-            return new SeckillResult<SeckillExecution>(false, seckillExecution);
+            return new SeckillResult<SeckillExecution>(true, seckillExecution);
         }
     }
 
     // 获取当前系统时间
     @RequestMapping(value = "/time/now", method = RequestMethod.GET)
+    @ResponseBody
     public SeckillResult<Long> time() {
         Date now = new Date();
         return new SeckillResult<Long>(true, now.getTime());

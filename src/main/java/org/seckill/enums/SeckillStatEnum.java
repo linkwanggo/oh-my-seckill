@@ -41,6 +41,6 @@ public enum  SeckillStatEnum {
                 return seckillStatEnum;
             }
         }
-        return null;
+        return SeckillStatEnum.INNER_ERROR;
     }
 }
