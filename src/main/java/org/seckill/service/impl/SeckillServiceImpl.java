@@ -54,6 +54,7 @@ public class SeckillServiceImpl implements SeckillService {
         if (seckill == null) {
             seckill = seckillDAO.queryById(seckillId);
             if (seckill == null) {
+                // 秒杀不存在
                 return new Exposer(false, seckillId);
             } else {
                 redisDAO.putSeckill(seckill);
@@ -63,7 +64,7 @@ public class SeckillServiceImpl implements SeckillService {
         Date startTime = seckill.getStartTime();
         Date endTime = seckill.getEndTime();
         Date now = new Date();
-        // 失败
+        // 秒杀时间不再范围内  返回当前系统时间
         if (now.getTime() < startTime.getTime() || now.getTime() > endTime.getTime()) {
             return new Exposer(false, seckillId, now, startTime, endTime);
         }

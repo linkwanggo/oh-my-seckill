@@ -5,7 +5,7 @@ import lombok.Data;
 @Data
 public class SeckillResult<T> {
 
-    // 是否成功
+    // 本次请求返回是否成功  非秒杀是否开启
     private boolean success;
 
     // 数据
